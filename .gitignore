@@ -1,0 +1,15 @@
+.vscode/
+.DS_Store
+/examples/example_evals.txt
+/examples/example_evecs.tx
+/examples/example_eg.1.txt
+/examples/example_eg.2.txt
+/examples/example_eg.3.txt
+/examples/example_eg.4.txt
+/examples/example_eg.5.txt
+/examples/example_projections.txt
+/examples/ukbchr1.bed
+/examples/ukbchr1.bim
+/examples/ukbchr1.fam
+/examples/*.phe
+build/*
