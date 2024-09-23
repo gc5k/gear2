@@ -25,62 +25,64 @@ typedef Matrix<double, Dynamic, Dynamic, RowMajor> MatrixXdr;
 
 struct rSqUnit_grm {
 	double rsq;
+	double psq;
 	double sd;
 	int mi;
 	int mj;
-	string p1;
+	// string p1;
 
-	double rsq_s;
-	double sd_s;
-	string ps;
+	// double rsq_s;
+	// double sd_s;
+	// string ps;
 	rSqUnit_grm() {
+		psq = 0.0;
 		rsq = 0.0;
 		sd = 0.0;
 		mi = 0;
 		mj = 0;
-		p1 = "0";
+		// p1 = "0";
 
-		rsq_s = -1;
-		sd_s = -1;
-		ps = "NA";
+		// rsq_s = -1;
+		// sd_s = -1;
+		// ps = "NA";
 	}
 };
 
-void compute_rsq(int start, int end, int itB, vector<int>& snp_sizeVec, vector<double>& grmM, vector<double>& grmSq, vector<VectorXd>& grmVec, vector<rSqUnit_grm>& rsqVec){
+void compute_rsq(int start, int end, int itB, vector<int>& snp_sizeVec, vector<double>& grmM, vector<double>& grmSq, vector<VectorXd>& grmVec,vector<VectorXd>& grm_diagonalVec, vector<rSqUnit_grm>& rsqVec){
 	int si = floor(sqrt(start * 2));
 	if(si * (si + 1) / 2 > start) si--;
 	int sj = start - (si * (si + 1) / 2);
 	double Nind = g.act_ind.size();
-	double f = (Nind * (Nind - 1.0) / 2.0);
+	double f = (Nind * Nind * 1.0);
 
-	using boost::math::students_t;
-	students_t Tdist(itB - 1);
-	using boost::math::complement;
+	// using boost::math::students_t;
+	// students_t Tdist(Nind - 1);
+	// using boost::math::complement;
     
 	int index = start, i = si, j = sj;
 	while(index < end){
         rSqUnit_grm ru;
-		double grmSqSum = i == j ? grmSq[i] : (grmVec[i].cwiseProduct(grmVec[j]).sum() / f);
-		double grmM1 = grmM[i];
-		double grmSq1 = grmSq[i];
-		double grmM2 = grmM[j];
-		double grmSq2 = grmSq[j];
-		double v1 = grmSq1 - grmM1 * grmM1;
-		double v2 = grmSq2 - grmM2 * grmM2;
+		double grmSqSum = i == j ? grmSq[i] : (( 2 * grmVec[i].cwiseProduct(grmVec[j]).sum() + grm_diagonalVec[i].cwiseProduct(grm_diagonalVec[j]).sum() )/ f);		
+		//double grmM1 = grmM[i];
+		//double grmSq1 = grmSq[i];
+		//double grmM2 = grmM[j];
+		//double grmSq2 = grmSq[j];
+		//double v1 = grmSq1 - grmM1 * grmM1;
+		//double v2 = grmSq2 - grmM2 * grmM2;
 
-		double cv = grmSqSum - grmM1 * grmM2;
-		double v3 = 2 / (Nind * (Nind - 1)) * (v1 * v2 + cv * cv);
-		double rsq = grmSqSum;
-		double tstat = rsq / sqrt(v3);
+		//double cv = grmSqSum - grmM1 * grmM2;
+		//double v3 = 2 / (Nind * (Nind - 1)) * (v1 * v2 + cv * cv) * (Nind * Nind) / ((Nind+1) * (Nind));
+		double rsq = grmSqSum - 1.0 / Nind;
+		//double tstat = rsq / sqrt(v3);
 		//cout << " tstat: "<<tstat << " rsq: "<< rsq<< " v3:"<< v3<<" v1:"<<v1<<" v2:"<<v2 <<" cv:"<<cv<<" grmSqSum:"<<grmSqSum<< endl;
-		string p_tstat = boost::to_string(cdf(complement(Tdist, tstat)));
-		if (cdf(complement(Tdist, tstat)) == 0) p_tstat = plinknum::tstat(itB - 1, tstat);
+		//string p_tstat = boost::to_string(cdf(complement(Tdist, tstat)));
+		//if (cdf(complement(Tdist, tstat)) == 0) p_tstat = plinknum::tstat(Nind - 1, tstat);
 
 		ru.rsq = rsq;
-		ru.sd = sqrt(v3);
+		//ru.sd = sqrt(v3);
 		ru.mi = snp_sizeVec[i];
 		ru.mj = snp_sizeVec[j];
-		ru.p1 = p_tstat;
+		ru.psq = rsq + 1.0 / Nind;
 		rsqVec[(i * (i+1) / 2) + j] = ru;
 
 		j++;
@@ -91,65 +93,65 @@ void compute_rsq(int start, int end, int itB, vector<int>& snp_sizeVec, vector<d
 		}
 	}
     
-	index = start;
-	i = si;
-	j = sj;
-	double v1 = grmSq[i] - grmM[i] * grmM[i];
-	int r1_mi = snp_sizeVec[i];
-	double r1_rsq = grmSq[i];
-	while(index < end){
-		double v2 = grmSq[j] - grmM[j] * grmM[j];
-		int r2_mj = snp_sizeVec[j];
-		double r2_rsq = grmSq[j];
-		int idx_ij = i * (i + 1) / 2 + j;
-		rSqUnit_grm r12 = rsqVec[idx_ij];
-		double v12 = (r12.sd * r12.sd) * (Nind * (Nind - 1) / 2) - v1 * v2;
-		string p_tstat = "NA";
-		if (i != j) {
-			double r12_s = -1;
-			double v12_s = 0;
-			double sd_s = -1;
-			double tstat = 0;
-			bool _valid = true;
-			if (((r1_mi * r1_rsq - 1) / (r1_mi - 1)) > 0 && ((r2_mj * r2_rsq - 1) / (r2_mj - 1)) > 0) {
-				r12_s =  r12.rsq / sqrt(((r1_rsq * r1_mi - 1) / (r1_mi - 1)) * ((r2_rsq * r2_mj - 1) / (r2_mj - 1)));
-			} else {
-				_valid = false;
-			}
+	// index = start;
+	// i = si;
+	// j = sj;
+	// //double v1 = grmSq[i] - grmM[i] * grmM[i];
+	// //int r1_mi = snp_sizeVec[i];
+	// //double r1_rsq = grmSq[i];
+	// while(index < end){
+	// 	double v2 = grmSq[j] - grmM[j] * grmM[j];
+	// 	int r2_mj = snp_sizeVec[j];
+	// 	double r2_rsq = grmSq[j];
+	// 	int idx_ij = i * (i + 1) / 2 + j;
+	// 	rSqUnit_grm r12 = rsqVec[idx_ij];
+	// 	double v12 = (r12.sd * r12.sd) * (Nind * (Nind - 1) / 2) - v1 * v2;
+	// 	string p_tstat = "NA";
+	// 	if (i != j) {
+	// 		double r12_s = -1;
+	// 		double v12_s = 0;
+	// 		double sd_s = -1;
+	// 		double tstat = 0;
+	// 		bool _valid = true;
+	// 		if (((r1_mi * r1_rsq - 1) / (r1_mi - 1)) > 0 && ((r2_mj * r2_rsq - 1) / (r2_mj - 1)) > 0) {
+	// 			r12_s =  r12.rsq / sqrt(((r1_rsq * r1_mi - 1) / (r1_mi - 1)) * ((r2_rsq * r2_mj - 1) / (r2_mj - 1)));
+	// 		} else {
+	// 			_valid = false;
+	// 		}
 
-			v12_s = 2 * r12_s * r12_s / (Nind * (Nind - 1)) * (v1 * v2 / v12 + v12 / (v1 * v2) - 2);
-			if (v12_s < 0 || r12_s < 0) {
-				_valid = false;
-			}
+	// 		v12_s = 2 * r12_s * r12_s / (Nind * (Nind - 1)) * (v1 * v2 / v12 + v12 / (v1 * v2) - 2);
+	// 		if (v12_s < 0 || r12_s < 0) {
+	// 			_valid = false;
+	// 		}
 			
-			if (_valid) {
-				rsqVec[idx_ij].rsq_s = r12_s;
-				rsqVec[idx_ij].sd_s = sqrt(v12_s);
-				tstat = r12_s / sqrt(v12_s);
-				p_tstat = boost::to_string(cdf(complement(Tdist, tstat)));
-				if (cdf(complement(Tdist, tstat)) == 0) p_tstat = plinknum::tstat(itB - 1, tstat);
-				rsqVec[idx_ij].ps = p_tstat;
-			} else {
-				rsqVec[idx_ij].rsq_s = -1;
-				rsqVec[idx_ij].sd_s = -1;
-				rsqVec[idx_ij].ps = "NA";
-			}
-		} else {
-			rsqVec[idx_ij].rsq_s = 1;
-			rsqVec[idx_ij].sd_s = 0;
-			rsqVec[idx_ij].ps = "0";
-		}
+	// 		if (_valid) {
+	// 			rsqVec[idx_ij].rsq_s = r12_s;
+	// 			rsqVec[idx_ij].sd_s = sqrt(v12_s);
+	// 			tstat = r12_s / sqrt(v12_s);
+	// 			p_tstat = boost::to_string(cdf(complement(Tdist, tstat)));
+	// 			if (cdf(complement(Tdist, tstat)) == 0) p_tstat = plinknum::tstat(itB - 1, tstat);
+	// 			rsqVec[idx_ij].ps = p_tstat;
+	// 		} else {
+	// 			rsqVec[idx_ij].rsq_s = -1;
+	// 			rsqVec[idx_ij].sd_s = -1;
+	// 			rsqVec[idx_ij].ps = "NA";
+	// 		}
+	// 	} else {
+	// 		rsqVec[idx_ij].rsq_s = 1;
+	// 		rsqVec[idx_ij].sd_s = 0;
+	// 		rsqVec[idx_ij].ps = "0";
+	// 	}
 
-		j++;
-		index++;
-		if(j > i){
-            i++;
-			j = 0;
-			v1 = grmSq[i] - grmM[i] * grmM[i];
-	        r1_mi = snp_sizeVec[i];
-	        r1_rsq = grmSq[i];
-		}
-	}
+	// 	j++;
+	// 	index++;
+	// 	if(j > i){
+    //         i++;
+	// 		j = 0;
+	// 		v1 = grmSq[i] - grmM[i] * grmM[i];
+	//         r1_mi = snp_sizeVec[i];
+	//         r1_rsq = grmSq[i];
+	// 	}
+	// }
 }
 
 class xLDgrm {
@@ -182,17 +184,17 @@ public:
 	}
 
 	void calXld() {
-		using boost::math::students_t;
-		students_t Tdist(itB - 1);
-		using boost::math::complement;
+		// using boost::math::students_t;
+		// students_t Tdist(itB - 1);
+		// using boost::math::complement;
 
 		double Nind = g.act_ind.size();
-		double f = (Nind * (Nind - 1.0) / 2.0);
+		double f = Nind * (Nind * 1.0);
 		vector<double> grmM(tag_nameVec.size());
 		vector<double> grmSq(tag_nameVec.size());
         for (int i = 0; i < tag_nameVec.size(); i++){
-			grmM[i] = grmVec[i].sum() / f;
-			grmSq[i] = grmVec[i].cwiseProduct(grmVec[i]).sum() / f;
+			grmM[i] = (2 * grmVec[i].sum() + grm_diagonalVec[i].sum()) / f;
+			grmSq[i] = (2 * grmVec[i].cwiseProduct(grmVec[i]).sum() + grm_diagonalVec[i].cwiseProduct(grm_diagonalVec[i]).sum()) / f;
 		}
 
 		int nthreads = goptions.GetGenericThreads();
@@ -202,9 +204,9 @@ public:
 		int perthread = all_size / nthreads;
 		int t = 0;
 		for (; t < nthreads-1; t++) {
-			th[t] = std::thread(compute_rsq, t * perthread, (t+1) * perthread, itB, std::ref(snp_sizeVec), std::ref(grmM), std::ref(grmSq), std::ref(grmVec), std::ref(rsqVec));
+			th[t] = std::thread(compute_rsq, t * perthread, (t+1) * perthread, itB, std::ref(snp_sizeVec), std::ref(grmM), std::ref(grmSq), std::ref(grmVec), std::ref(grm_diagonalVec), std::ref(rsqVec));
 		}
-		th[t] = std::thread(compute_rsq, t * perthread, all_size, itB, std::ref(snp_sizeVec), std::ref(grmM), std::ref(grmSq), std::ref(grmVec), std::ref(rsqVec));
+		th[t] = std::thread(compute_rsq, t * perthread, all_size, itB, std::ref(snp_sizeVec), std::ref(grmM), std::ref(grmSq), std::ref(grmVec), std::ref(grm_diagonalVec), std::ref(rsqVec));
 		for (int t = 0; t < nthreads; t++) {
 			th[t].join();
 		}
@@ -213,19 +215,21 @@ public:
 		string fname_r = goptions.GetGenericOutFile() + string(".xld");
 		e_file_r.open(fname_r.c_str());
 		cout << "Writing grm-based x-ld results to " << fname_r.c_str() << " ..." << endl;
-		e_file_r << "Tagi\tSNPi\tTagj\tSNPj\trsq\tsd\tpval\trsq_s\tsd_s\tpval_s" << endl;
-		cout << "Tagi\tSNPi\tTagj\tSNPj\trsq\tsd\tpval\trsq_s\tsd_s\tpval_s" << endl;
+		e_file_r << "Tagi\tSNPi\tTagj\tSNPj\trsq\tpsq" << endl;
+		// e_file_r << "Tagi\tSNPi\tTagj\tSNPj\trsq\tsd\tpval\trsq_s\tsd_s\tpval_s" << endl;
+		// cout << "Tagi\tSNPi\tTagj\tSNPj\trsq\tsd\tpval\trsq_s\tsd_s\tpval_s" << endl;
 
 		for (int i = 0; i < tag_nameVec.size(); i++) {
 			for (int j = 0; j <= i; j++) {
 				rSqUnit_grm rsq = rsqVec[i  * (i + 1) / 2 + j];
-				e_file_r << tag_nameVec[i] << "\t" << rsq.mi << "\t" << tag_nameVec[j] << "\t" << rsq.mj << "\t" 
-				<< rsq.rsq << "\t" << rsq.sd << "\t" << rsq.p1 << "\t"
-				<< rsq.rsq_s << "\t" << rsq.sd_s << "\t" << rsq.ps << endl;
+				e_file_r << tag_nameVec[i] << "\t" << rsq.mi << "\t" << tag_nameVec[j] << "\t" << rsq.mj << "\t" << rsq.rsq << "\t" << rsq.psq <<endl;
+				// e_file_r << tag_nameVec[i] << "\t" << rsq.mi << "\t" << tag_nameVec[j] << "\t" << rsq.mj << "\t" 
+				// << rsq.rsq << "\t" << rsq.sd << "\t" << rsq.p1 << "\t"
+				// << rsq.rsq_s << "\t" << rsq.sd_s << "\t" << rsq.ps << endl;
 
-				cout << tag_nameVec[i] << "\t" << rsq.mi << "\t" << tag_nameVec[j] << "\t" << rsq.mj << "\t" 
-				<< rsq.rsq << "\t" << rsq.sd << "\t" << rsq.p1 << "\t"
-				<< rsq.rsq_s << "\t" << rsq.sd_s << "\t" << rsq.ps << endl;
+				// cout << tag_nameVec[i] << "\t" << rsq.mi << "\t" << tag_nameVec[j] << "\t" << rsq.mj << "\t" 
+				// << rsq.rsq << "\t" << rsq.sd << "\t" << rsq.p1 << "\t"
+				// << rsq.rsq_s << "\t" << rsq.sd_s << "\t" << rsq.ps << endl;
 			}
 		}
 		e_file_r.close();
@@ -233,7 +237,7 @@ public:
 
 	~xLDgrm() {
 		cout << "Finishing determistic xLD algorithm ..." << endl;
-		mailbox::cleanMem();
+		//mailbox::cleanMem();
 		clock_t xldgrm_end = clock();
 		double xldgrm_time = double(xldgrm_end - xldgrm_begin) / CLOCKS_PER_SEC;
 		cout << "xld total time " << xldgrm_time << "s." << endl;
@@ -242,6 +246,7 @@ public:
 private:
 	int itB;
 	vector<VectorXd> grmVec;
+	vector<VectorXd> grm_diagonalVec;
 	vector<int> snp_sizeVec;
 	vector<string> tag_nameVec;
 	vector<rSqUnit_grm> rsqVec;
@@ -251,7 +256,9 @@ private:
 		int _Nind = g.act_ind.size();
 
 		VectorXd grm(((_Nind-1) * _Nind) / 2);
+		VectorXd grm_diagonal(_Nind);
 		int grm_index = 0;
+		int grm_diagonal_index = 0;
 		MatrixXdr gSet;
 		for (int c = 0; c < tag_nameVec.size(); c++) {
 			vector<string> _tag;
@@ -263,6 +270,7 @@ private:
 			g.make_MailmanP();
 			mailbox::setMem();
 			grm_index = 0;
+			grm_diagonal_index = 0;
 
 			int i = 0;
 			for (; i+itB < _Nind; i+=itB) {
@@ -278,10 +286,16 @@ private:
 				gXset /= (1.0 * _Nsnp);
 
 				for (int _i = 0; _i < itB; _i++) {
-					for (int _j = 0; _j < i+_i; _j++) {
+					for (int _j = 0; _j <= i+_i; _j++) {
+					if (_j == i + _i) {
+                        grm_diagonal(grm_diagonal_index) = gXset(_i, _j);
+                        grm_diagonal_index++;
+                    }else{
 						grm(grm_index) = gXset(_i, _j);
 						grm_index++;
+					} 					
 					}
+					
 				}
 			}
 
@@ -298,12 +312,19 @@ private:
 			gXset /= (1.0 * _Nsnp);
 
 			for (int _i = 0; _i < _itB; _i++) {
-				for (int _j = 0; _j < i+_i; _j++) {
+				for (int _j = 0; _j <= i+_i; _j++) {
+					if (_j == i + _i) {
+                        grm_diagonal(grm_diagonal_index) = gXset(_i, _j);
+                        grm_diagonal_index++;
+                    }else {
 					grm(grm_index) = gXset(_i, _j);
 					grm_index++;
+					} 						
 				}
 			}
 			grmVec.push_back(grm);
+			grm_diagonalVec.push_back(grm_diagonal);
+			mailbox::cleanMem();
 		}
 	}
 };

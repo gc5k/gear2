@@ -272,10 +272,15 @@ private:
 	void iterLB(int it, std::default_random_engine generator) {
 		MatrixXdr Bz(static_cast<int> (Nindv), it);
 		std::normal_distribution<double> norm_dist(0, 1.0);
-		for (int i = 0; i < Bz.rows(); i++) {
-			for (int j = 0; j < Bz.cols(); j++) {
-				Bz(i, j) = norm_dist(generator);
+		for (int i = 0; i < Bz.cols(); i++) {
+		// Copy Yval
+			std::vector<double> ShufYvalVector(Yval.data(), Yval.data() + Yval.size());
+			std::shuffle(ShufYvalVector.begin(), ShufYvalVector.end(), generator);
+			for (int j = 0; j < Bz.rows(); j++) {
+				Bz(j, i) = ShufYvalVector[j];
+//				Bz(i, j) = norm_dist(generator);
 			}
+			cout << "shuffledYval " << Bz(0, i) << " " << Bz(1, i) << " " << ShufYvalVector[0] << " " << ShufYvalVector[1] << " " << Yval(0, 0) << " " << Yval(1, 0) << endl;
 		}
 
 		//geno_matrix * Bz; //(p x n) * (n x iter) = p x iter
@@ -332,15 +337,16 @@ private:
 		trK4_var = (lb4_ss - trK4 * trK4 * LB4.size()) / (1.0 * LB4.size() - 1);
 		me = 1 / ((trK2 - Nindv) / ((Nindv + 1) * Nindv));
 		me_sd = (me / Nindv * me / Nindv * _lb_sd2 / sqrt(1.0 * LB2.size()));
-
 		cout << "trK1, trK1_var " << trK1 << " " << trK1_var << endl;
 		cout << "trK2, trK2_var (trK4*2), trK2_var0 " << trK2 << " " << trK2_var << " " << trK2_var0 << endl;
 		cout << "trK4, trK4_var " << trK4 << " " << trK4_var << endl;
 		cout << "me, me_sd " << me << " " << me_sd << endl;
+		
 	}
 
 	void updateStats() {
-		cout << "Updating parameters --------------- after " << It_total << " iterations." << endl;
+
+		cout << endl << "Updating parameters --------------- after " << It_total << " iterations." << endl;
 
 		long double trK2_N = trK2 - Nindv;
 
@@ -378,7 +384,11 @@ private:
 		cout << "delta delta_B " << delta << " " << delta_B << endl;
 		cout << "eta_h2 eta_E " << eta_h2 << " " << eta_E << endl;
 		cout << "h2 h2se v_E " << h2 << " " << h2_se << " " << v_E << endl;
-		cout << "mse " << mse << endl << endl;
+		cout << "mse " << mse << endl;
+
+		Ezh2 = Nindv * Nindv / (sqrt(2) * me) * (h2) / sqrt(eta_h2 * h2 + eta_E * v_E);
+		zh2 = Nindv * Nindv / (sqrt(2) * me) * (h2) / sqrt(eta_h2 * h2 + eta_E * v_E + trK4 * h2 * h2 / (1.0 * It_total));
+		cout << "Ezh2 zh2 " << Ezh2 << " " << zh2 << endl << endl;
 
 		h2w = (yK1y * trV - yIy * trKV) / (trKVKV * trV - trKV * trKV);
 		v_Ew = (trKVKV * yIy - trKV * yK1y) / (trV * trKVKV - trKV * trKV);
@@ -416,7 +426,9 @@ private:
 		cout << "W_1:eta_h2_1 eta_E_1 " << eta_h2_r << " " << eta_E_r << endl;
 		cout << "W_1:h2w h2wse v_E_1 " << h2_r << " " << h2_se_r << " " << v_E_r << endl;
 		cout << "W_1:mse_r " << mse_r << endl;
-
+		Ezh2_w = Nindv * Nindv / (sqrt(2) * me) * (h2) / sqrt(eta_h2_r * h2_r + eta_E_r * v_E_r);
+		zh2_w = Nindv * Nindv / (sqrt(2) * me) * (h2) / sqrt(eta_h2_r * h2_r + eta_E_r * v_E + trK4 * h2 * h2 / (1.0 * It_total));
+		cout << "Ezh2_w zh2_w " << Ezh2_w << " " << zh2_w << endl << endl;
 /*
 		h2w_1 = (yK1y * trV - yIy * trKV) / Nindv / trK2_N;
 		v_Ew_1 = (trKVKV * yIy - trKV * yK1y) / Nindv / trK2_N;
@@ -506,6 +518,11 @@ private:
 	long double eta_h2w, eta_Ew;
 	long double eta_h2_r, eta_E_r;
 
+	double Ezh2 = 0;
+	double zh2 = 0;
+
+	double Ezh2_w = 0;
+	double zh2_w = 0;
 	int It_total = 0;
 
 	double round_err = 0.1;
