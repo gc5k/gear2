@@ -1,4 +1,3 @@
-arg=commandArgs(T)
 X_LD_Visualization <- function(input=NULL,output=NULL,significant=FALSE){
   library(ggplot2)
   #  Check inputs
@@ -57,6 +56,4 @@ X_LD_Visualization <- function(input=NULL,output=NULL,significant=FALSE){
     coord_fixed()
   ggsave(paste0(output,".pdf"),p,width=8,height=8)
 }
-input<-arg[1]
-output<-arg[2]
-X_LD_Visualization(input,output)
+
