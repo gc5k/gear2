@@ -16,9 +16,9 @@ rm ${prefix}_chr*.tmp
 ### 判断xld参数
 if [[ $xld -eq 0 ]]
 then
-    gear --bfile ${prefix} --snp-tag ${prefix}_block1000.txt --xld --threads ${thread_num} --out ${prefix}_1000 > ${prefix}_1000.log 2>&1
+    ../build/gear --bfile ${prefix} --snp-tag ${prefix}_block1000.txt --xld --threads ${thread_num} --out ${prefix}_1000 > ${prefix}_1000.log 2>&1
 else
-    gear --bfile ${prefix} --snp-tag ${prefix}_block1000.txt --xld --xld-alg 1 --iter 100 --threads ${thread_num} --out ${prefix}_1000 > ${prefix}_1000.log 2>&1
+    ../build/gear --bfile ${prefix} --snp-tag ${prefix}_block1000.txt --xld --xld-alg 1 --iter 100 --threads ${thread_num} --out ${prefix}_1000 > ${prefix}_1000.log 2>&1
 fi
 
 
@@ -26,22 +26,22 @@ fi
 for j in `seq ${chr}`
 do
    plink2 --bfile ${prefix} --chr-set ${chr} --chr ${j} --silent --make-bed --out ${prefix}_${j}
-   gear --bfile ${prefix}_${j} --propc --threads ${thread_num} --max-it 50 --evec 30 --out ${prefix}_${j} > ${prefix}_${j}.log 2>&1
+   ../build/gear --bfile ${prefix}_${j} --propc --threads ${thread_num} --max-it 50 --evec 30 --out ${prefix}_${j} > ${prefix}_${j}.log 2>&1
 done
 
 if [[ $xld -eq 0 ]]
 then
-    gear --bfile ${prefix} --xld --threads ${thread_num} --out ${prefix}
+    ../build/gear --bfile ${prefix} --xld --threads ${thread_num} --out ${prefix}
 else
-    gear --bfile ${prefix} --xld --xld-alg 1 --iter 100 --threads ${thread_num} --out ${prefix}
+    ../build/gear --bfile ${prefix} --xld --xld-alg 1 --iter 100 --threads ${thread_num} --out ${prefix}
 fi
 
 
 if [[ $xld -eq 0 ]]
 then
-    Rscript --no-save NormI_II.R ${prefix}_1000.xld ${prefix}.xld
+    Rscript --no-save Atlas.R ${prefix}_1000.xld ${prefix}.xld
 else
-    Rscript --no-save NormI_II.R ${prefix}_1000.xldr ${prefix}.xldr
+    Rscript --no-save Atlas.R ${prefix}_1000.xldr ${prefix}.xldr
 fi
 
 
