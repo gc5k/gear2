@@ -2,23 +2,24 @@
 prefix=$1
 thread_num=$2
 xld=$3
+block_size=$4
 chr=$(awk '{print $1}' ${prefix}.bim | sort -u | wc -l)
 
 ### High-resolution LD
 for i in $(seq ${chr})
 do
-    awk -v OFS='\t' -v chr=$i '$1 == chr {count++; if(count%1000==1){block++}; print $2, chr"_"block}' ${prefix}.bim > ${prefix}_chr${i}.tmp
+    awk -v OFS='\t' -v chr=$i -v size=$block_size '$1 == chr {count++; if(count%size==1){block++}; print $2, chr"_"block}' ${prefix}.bim > ${prefix}_chr${i}.tmp
 done
 
-cat ${prefix}_chr*.tmp > ${prefix}_block1000.txt
+cat ${prefix}_chr*.tmp > ${prefix}_block${block_size}.txt
 rm ${prefix}_chr*.tmp
 
 ### 判断xld参数
 if [[ $xld -eq 0 ]]
 then
-    ../build/gear --bfile ${prefix} --snp-tag ${prefix}_block1000.txt --xld --threads ${thread_num} --out ${prefix}_1000 > ${prefix}_1000.log 2>&1
+    ../build/gear --bfile ${prefix} --snp-tag ${prefix}_block${block_size}.txt --xld --threads ${thread_num} --out ${prefix}_${block_size} > ${prefix}_${block_size}.log 2>&1
 else
-    ../build/gear --bfile ${prefix} --snp-tag ${prefix}_block1000.txt --xld --xld-alg 1 --iter 100 --threads ${thread_num} --out ${prefix}_1000 > ${prefix}_1000.log 2>&1
+    ../build/gear --bfile ${prefix} --snp-tag ${prefix}_block${block_size}.txt --xld --xld-alg 1 --iter 100 --threads ${thread_num} --out ${prefix}_${block_size} > ${prefix}_${block_size}.log 2>&1
 fi
 
 
@@ -39,16 +40,7 @@ fi
 
 if [[ $xld -eq 0 ]]
 then
-    Rscript --no-save Atlas.R ${prefix}_1000.xld ${prefix}.xld
+    Rscript --no-save Atlas.R ${prefix}_${block_size}.xld ${prefix}.xld
 else
-    Rscript --no-save Atlas.R ${prefix}_1000.xldr ${prefix}.xldr
+    Rscript --no-save Atlas.R ${prefix}_${block_size}.xldr ${prefix}.xldr
 fi
-
-
-
-
-
-
-
-
-
