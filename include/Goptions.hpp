@@ -201,6 +201,7 @@ public:
 			k = GetRandHEB0() > GetRandHEB1() ? GetRandHEB0() : GetRandHEB1();
 		} else if(CheckMeMasterOption() || CheckXLDMasterOption()) {
 			k = GetGenericIteration();
+			if (xld_alg == 1) k=1;
 		} else if (CheckEncMasterOption()) {
 			k = GetEncK();
 		}
